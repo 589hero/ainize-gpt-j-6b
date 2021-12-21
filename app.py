@@ -1,6 +1,7 @@
 import time
 import torch
 
+from typing import List, Dict
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from flask import Flask, request, jsonify, render_template
 from queue import Queue, Empty
@@ -10,7 +11,7 @@ app = Flask(__name__)
 
 print("model loading...")
 
-# Model & Tokenizer loading
+# # Model & Tokenizer loading
 tokenizer = AutoTokenizer.from_pretrained("./model")
 model = AutoModelForCausalLM.from_pretrained("./model", torch_dtype=torch.float16)
 
@@ -35,7 +36,7 @@ def handle_requests_by_batch():
 
             for requests in request_batch:
                 try:
-                    requests["output"] = make_text(requests['input'][0], requests['input'][1])
+                    requests["output"] = make_text(requests['input'])
 
                 except Exception as e:
                     requests["output"] = e
@@ -44,20 +45,22 @@ def handle_requests_by_batch():
 handler = Thread(target=handle_requests_by_batch).start()
 
 
-def make_text(text, length):
+def make_text(request_input: List) -> Dict:
     try:
+        text, max_length, temperature, top_p, repetition_penalty = request_input[0], request_input[1], request_input[2], request_input[3], request_input[4]
+
         input_ids = tokenizer.encode(text, return_tensors='pt')
         input_ids = input_ids.to(device)
         min_length = len(input_ids.tolist()[0])
-        length = length if length > 0 else 1
-        length += min_length
+        max_length = max_length if max_length > 0 else 1
+        max_length += min_length
         gen_ids = model.generate(input_ids,
-                                 max_length=128,
+                                 max_length=max_length,
+                                 temperature=temperature,
                                  do_sample=True,
-                                 repetition_penalty=0.8,
-                                 top_p=0.95,
+                                 repetition_penalty=repetition_penalty,
+                                 top_p=top_p,
                                  top_k=50)
-        # temperature, max_length, top_p, frequency penalty(repetition_penalty), presence penalty
         result = dict()
 
         for idx, sample_output in enumerate(gen_ids):
@@ -77,10 +80,16 @@ def generate():
     try:
         args = []
         text = request.form['text']
-        length = int(request.form['length'])
+        length = int(request.form.get('length'), 150)
+        temperature = float(request.form.get('temperature', 0.9))
+        top_p = float(request.form.get('top_p', 0.95))
+        repetition_penalty = float(request.form.get('repetition_penalty', 0.8))
 
         args.append(text)
         args.append(length)
+        args.append(temperature)
+        args.append(top_p)
+        args.append(repetition_penalty)
 
     except Exception as e:
         return jsonify({'Error': 'Invalid request'}), 500
@@ -101,7 +110,7 @@ def health_check():
 
 @app.route('/')
 def main():
-    return render_template('main.html'), 200
+    return "Hello", 200
 
 
 if __name__ == '__main__':
