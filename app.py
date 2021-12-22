@@ -92,7 +92,9 @@ def generate():
         args.append(repetition_penalty)
 
     except Exception as e:
-        return jsonify({'Error': 'Invalid request'}), 500
+        # return jsonify({'Error': 'Invalid request'}), 500
+        return jsonify({'Error': e}), 500
+
 
     req = {'input': args}
     requests_queue.put(req)
@@ -110,7 +112,6 @@ def health_check():
 
 @app.route('/')
 def main():
-    # return render_template('main.html'), 200
     return 'hello', 200
 
 
