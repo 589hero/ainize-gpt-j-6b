@@ -11,12 +11,12 @@ app = Flask(__name__)
 
 print("model loading...")
 
-# # # Model & Tokenizer loading
-# tokenizer = AutoTokenizer.from_pretrained("./model")
-# model = AutoModelForCausalLM.from_pretrained("./model", torch_dtype=torch.float16)
+# Model & Tokenizer loading
+tokenizer = AutoTokenizer.from_pretrained("./model")
+model = AutoModelForCausalLM.from_pretrained("./model", torch_dtype=torch.float16)
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# model.to(device)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model.to(device)
 
 requests_queue = Queue()    # request queue.
 BATCH_SIZE = 1              # max request size.
@@ -46,7 +46,6 @@ handler = Thread(target=handle_requests_by_batch).start()
 
 
 def make_text(request_input: List) -> Dict:
-    return "result"
     try:
         text, max_length, temperature, top_p, repetition_penalty = request_input[0], request_input[1], request_input[2], request_input[3], request_input[4]
 
@@ -92,10 +91,7 @@ def generate():
         args.append(top_p)
         args.append(repetition_penalty)
 
-        print(args)
-
     except Exception as e:
-        print(e)
         return jsonify({'Error': 'Invalid request'}), 500
 
     req = {'input': args}
