@@ -47,7 +47,8 @@ handler = Thread(target=handle_requests_by_batch).start()
 
 def make_text(request_input: List) -> Dict:
     try:
-        text, max_length, temperature, top_p, repetition_penalty = request_input[0], request_input[1], request_input[2], request_input[3], request_input[4]
+        text, max_length, temperature, top_p, repetition_penalty, num_samples = ...
+        request_input[0], request_input[1], request_input[2], request_input[3], request_input[4], request_input[5]
 
         input_ids = tokenizer.encode(text, return_tensors='pt')
         input_ids = input_ids.to(device)
@@ -60,11 +61,12 @@ def make_text(request_input: List) -> Dict:
                                  do_sample=True,
                                  repetition_penalty=repetition_penalty,
                                  top_p=top_p,
-                                 top_k=50)
+                                 top_k=50,
+                                 num_samples=num_samples)
         result = dict()
 
         for idx, sample_output in enumerate(gen_ids):
-            result[0] = tokenizer.decode(sample_output.tolist(), skip_special_tokens=True)
+            result[idx] = tokenizer.decode(sample_output.tolist(), skip_special_tokens=True)
         return result
 
     except Exception as e:
@@ -84,12 +86,14 @@ def generate():
         temperature = float(request.form.get('temperature', 0.9))
         top_p = float(request.form.get('top_p', 0.95))
         repetition_penalty = float(request.form.get('repetition_penalty', 0.8))
+        num_samples = int(request.form.get('num_samples', 1))
 
         args.append(text)
         args.append(length)
         args.append(temperature)
         args.append(top_p)
         args.append(repetition_penalty)
+        args.append(num_samples)
 
     except Exception as e:
         # return jsonify({'Error': 'Invalid request'}), 500
